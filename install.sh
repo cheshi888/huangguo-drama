@@ -35,6 +35,17 @@ else
   exit 1
 fi
 
+# 校验依赖是否就绪
+command -v git >/dev/null 2>&1 || { echo "[错误] git 安装失败，请手动安装"; exit 1; }
+if command -v python3 >/dev/null 2>&1; then
+  PY="python3"
+elif command -v python >/dev/null 2>&1; then
+  PY="python"
+else
+  echo "[错误] python3 安装失败，请手动安装"; exit 1
+fi
+echo "  依赖就绪：git $(git --version 2>&1 | awk '{print $3}') / $($PY --version 2>&1)"
+
 # 2) 拉取代码
 echo "[2/4] 拉取代码 ${REPO} ..."
 if [ -d "${APP_DIR}/.git" ]; then
