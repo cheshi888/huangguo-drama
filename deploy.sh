@@ -12,10 +12,10 @@ PORT="${PANEL_PORT:-8788}"
 
 # 打印播放地址 / 订阅地址 / 快捷指令
 print_info() {
-  # 公网 IP 优先（hostname -I 可能返回内网 IP，如 10.x / 172.x）
-  IP=$(curl -s --max-time 5 ip.sb 2>/dev/null)
-  [ -z "$IP" ] && IP=$(curl -s --max-time 5 ifconfig.me 2>/dev/null)
-  [ -z "$IP" ] && IP=$(curl -s --max-time 5 api.ipify.org 2>/dev/null)
+  # 公网 IPv4 优先（-4 强制走 IPv4，避免取到 IPv6）
+  IP=$(curl -4 -s --max-time 5 ip.sb 2>/dev/null)
+  [ -z "$IP" ] && IP=$(curl -4 -s --max-time 5 ifconfig.me 2>/dev/null)
+  [ -z "$IP" ] && IP=$(curl -4 -s --max-time 5 api.ipify.org 2>/dev/null)
   [ -z "$IP" ] && IP=$(hostname -I 2>/dev/null | awk '{print $1}')
   [ -z "$IP" ] && IP="你的服务器IP"
   echo ""
