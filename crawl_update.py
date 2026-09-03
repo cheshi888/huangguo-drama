@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""黄果短剧增量更新器
-- 每次运行先重新扫描全站分类页，收集当前全部剧集 ID
+"""黄果短剧增量更新器（并行高性能版）
+- 并行扫描全站分类页，收集当前全部剧集 ID
 - 与已爬取数据对比：只爬「新增剧集」+「上次失败的重试」
-- 已成功爬取的剧集完全跳过（不重复请求）
+- 并行取流（多集/多剧并发），低内存低延迟
 """
 import sys, json, time, os, re
+from concurrent.futures import ThreadPoolExecutor
+
 sys.path.insert(0, r"E:\workspace")
 import huangguo_parser as h
 
@@ -16,6 +18,21 @@ PROG_FILE = r"E:\workspace\crawl_progress.json"
 OUT_M3U = r"E:\workspace\all_playlist.m3u8"
 OUT_JSON = r"E:\workspace\all_streams.json"
 
+# 并发线程数（线程池，内存开销小）。可通过环境变量 CRAWL_WORKERS 调整。
+# 网站对并发有惩罚，过高反而触发限流，12 是较稳健的值。
+WORKERS = int(os.environ.get("CRAWL_WORKERS", "12"))
+
+
+def parallel_map(fn, args, workers=None):
+    """线程池并行 map，保持参数顺序。args 为空时直接返回空列表。"""
+    args = list(args)
+    if not args:
+        return []
+    w = workers or WORKERS
+    w = max(1, min(w, len(args)))
+    with ThreadPoolExecutor(max_workers=w) as ex:
+        return list(ex.map(fn, args))
+
 
 def pages_of(cat):
     p = h.fetch(h.SITE + "/" + cat.strip("/") + "/")
@@ -23,24 +40,40 @@ def pages_of(cat):
     return int(m.group(1)) if m else 1
 
 
-def collect_all_ids():
-    seen, order = {}, []
-    for cat in CATS:
+def collect_all_ids(limit=None):
+    """扫描全站分类页收集剧集 ID。
+    limit：每个分类最多扫多少页（None=全部；用于快速检查时传 1~3）。"""
+    # 1) 并行获取各分类页数
+    def cat_pages(cat):
         try:
-            pages = pages_of(cat)
+            return cat, pages_of(cat)
         except Exception:
-            continue
-        for pg in range(1, pages + 1):
-            url = h.SITE + "/" + cat.strip("/") + "/" + (("%d/" % pg) if pg > 1 else "")
-            try:
-                cards = h.parse_cards(h.fetch(url))
-            except Exception:
-                continue
-            for c in cards:
-                if c["id"] and c["id"] not in seen:
-                    seen[c["id"]] = c["title"]
-                    order.append(c["id"])
-            time.sleep(0.12)
+            return cat, 0
+    pages_by_cat = dict(parallel_map(cat_pages, CATS, workers=len(CATS)))
+
+    # 2) 生成全站所有分类页 URL
+    page_urls = []
+    for cat in CATS:
+        total = pages_by_cat.get(cat, 0)
+        if limit is not None:
+            total = min(total, limit)
+        for pg in range(1, total + 1):
+            page_urls.append(h.SITE + "/" + cat.strip("/") + "/"
+                             + (("%d/" % pg) if pg > 1 else ""))
+
+    # 3) 并行抓取所有分类页并解析卡片
+    def fetch_cards(url):
+        try:
+            return h.parse_cards(h.fetch(url))
+        except Exception:
+            return []
+
+    seen, order = {}, []
+    for cards in parallel_map(fetch_cards, page_urls):
+        for c in cards:
+            if c["id"] and c["id"] not in seen:
+                seen[c["id"]] = c["title"]
+                order.append(c["id"])
     return seen, order
 
 
@@ -74,14 +107,16 @@ def crawl_one(did, title, items):
     d = h.parse_detail(h.fetch(h.SITE + "/detail/%s/" % did))
     eps = d.get("episodes") or []
     title = d.get("title") or title or did
-    for e in eps:
+
+    def fetch_ep(e):
         try:
             s = h.get_stream(e["url"], e["ep"])
-            items.append({"id": did, "title": title, "ep": e["ep"],
-                          "label": e["label"], "url": e["url"], "stream": s})
+            return {"id": did, "title": title, "ep": e["ep"],
+                    "label": e["label"], "url": e["url"], "stream": s}
         except Exception as ex:
-            items.append({"id": did, "title": title, "ep": e["ep"], "error": str(ex)})
-        time.sleep(0.15)
+            return {"id": did, "title": title, "ep": e["ep"], "error": str(ex)}
+
+    items.extend(parallel_map(fetch_ep, eps, workers=min(len(eps), 20)))
     return {"title": title, "eps": len(eps)}
 
 
@@ -94,24 +129,27 @@ def stream_age(stream):
 
 
 def refresh_streams(items, max_age=1800):
-    """重新抓取已超时的剧集播放地址（防签名过期）。max_age：签发超过多少秒才刷新"""
-    ok = err = skip = 0
+    """并行重新抓取已超时的剧集播放地址（防签名过期）。max_age：签发超过多少秒才刷新"""
+    todo = []
     for it in items:
         if not it.get("url"):
             continue
         age = stream_age(it.get("stream"))
         if age is not None and age < max_age:
-            skip += 1
             continue
+        todo.append(it)
+
+    def do(it):
         try:
             it["stream"] = h.get_stream(it["url"], it["ep"])
             it.pop("error", None)
-            ok += 1
+            return "ok"
         except Exception as ex:
             it["error"] = str(ex)
-            err += 1
-        time.sleep(0.12)
-    return ok, err, skip
+            return "err"
+
+    results = parallel_map(do, todo)
+    return results.count("ok"), results.count("err"), len(items) - len(todo)
 
 
 def main():
