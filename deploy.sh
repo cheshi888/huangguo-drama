@@ -10,6 +10,33 @@ APP_DIR="$(cd "$(dirname "$0")" && pwd)"
 SERVICE_NAME="huangguo"
 PORT="${PANEL_PORT:-8788}"
 
+# 打印播放地址 / 订阅地址 / 快捷指令
+print_info() {
+  IP=$(hostname -I 2>/dev/null | awk '{print $1}')
+  [ -z "$IP" ] && IP=$(curl -s --max-time 5 ifconfig.me 2>/dev/null)
+  [ -z "$IP" ] && IP="你的服务器IP"
+  echo ""
+  echo "  ============== 黄果短剧 =============="
+  echo "  播放面板 : http://${IP}:${PORT}/"
+  echo "  订阅地址 : http://${IP}:${PORT}/playlist.m3u8"
+  echo "  ======================================"
+  echo ""
+  echo "  快捷指令："
+  echo "    查看状态 : systemctl status ${SERVICE_NAME}"
+  echo "    实时日志 : journalctl -u ${SERVICE_NAME} -f"
+  echo "    重启服务 : systemctl restart ${SERVICE_NAME}"
+  echo "    更新代码 : cd ${APP_DIR} && git pull && systemctl restart ${SERVICE_NAME}"
+  echo ""
+  echo "  重新打印本信息 : bash ${APP_DIR}/deploy.sh info"
+  echo ""
+}
+
+# 只打印信息（无需 root）
+if [ "$1" = "info" ]; then
+  print_info
+  exit 0
+fi
+
 if [ "$(id -u)" -ne 0 ]; then
   echo "[错误] 请用 root 运行: sudo bash deploy.sh"
   exit 1
@@ -69,21 +96,7 @@ systemctl restart "${SERVICE_NAME}"
 
 # 4) 完成
 echo "[4/4] 部署完成！"
-IP=$(hostname -I 2>/dev/null | awk '{print $1}')
-[ -z "$IP" ] && IP=$(curl -s --max-time 5 ifconfig.me 2>/dev/null)
-[ -z "$IP" ] && IP="你的服务器IP"
-echo ""
-echo "  ============== 部署成功 =============="
-echo "  播放面板 : http://${IP}:${PORT}/"
-echo "  订阅地址 : http://${IP}:${PORT}/playlist.m3u8"
-echo "  ======================================"
-echo ""
-echo "  快捷指令："
-echo "    查看状态 : systemctl status ${SERVICE_NAME}"
-echo "    实时日志 : journalctl -u ${SERVICE_NAME} -f"
-echo "    重启服务 : systemctl restart ${SERVICE_NAME}"
-echo "    更新代码 : cd ${APP_DIR} && git pull && systemctl restart ${SERVICE_NAME}"
-echo ""
+print_info
 echo "  修改刷新间隔等配置：编辑 ${SERVICE_FILE}"
 echo "  然后: systemctl daemon-reload && systemctl restart ${SERVICE_NAME}"
 echo ""
