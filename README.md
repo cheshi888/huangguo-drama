@@ -12,7 +12,8 @@
 | `player_server.py` | 本地播放面板（网页） + 订阅服务（m3u8） |
 | `export_m3u.py` | 从爬取结果导出 m3u8 播放列表 |
 | `start.py` / `start.bat` | 一键启动（Windows） |
-| `deploy.sh` | Linux VPS 一键部署（systemd 常驻 + 开机自启） |
+| `install.sh` | Linux VPS 一键安装（自动拉取代码 + 部署 + 后台常驻） |
+| `deploy.sh` | 部署脚本（install.sh 内部调用） |
 
 ## 使用
 
@@ -21,15 +22,15 @@ start.bat              # 一键启动：后台常驻守护 + 播放面板（http
 python start.py update # 手动增量更新
 ```
 
-## VPS 部署（Linux）
+## VPS 一键安装（Linux）
 
-把整个目录上传到 VPS，然后执行：
+在 VPS 上执行下面**一条命令**，自动拉取代码、装依赖、部署并后台常驻：
 
 ```bash
-sudo bash deploy.sh
+curl -fsSL https://raw.githubusercontent.com/cheshi888/huangguo-drama/main/install.sh | sudo bash
 ```
 
-脚本会自动：检测 Python3 → 生成 systemd 服务 → 开机自启 + 常驻运行。
+脚本会自动：安装 git/python3 → git clone 代码 → 生成 systemd 服务 → 开机自启 + 后台运行。
 
 部署后访问：
 - 播放面板：`http://<VPS公网IP>:8788/`
@@ -43,6 +44,7 @@ systemctl restart huangguo    # 重启
 ```
 
 > 只需 Python3（无需任何第三方库）。如无法访问请放行防火墙端口 8788。
+> 更新到最新代码：重新执行上面那条 curl 命令即可（脚本会 git pull + 重启服务）。
 
 ## 订阅地址
 
