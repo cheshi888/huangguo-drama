@@ -282,6 +282,29 @@ class App(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b)
 
+    def _head(self, body, ctype):
+        self.send_response(200)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+
+    def do_HEAD(self):
+        """支持 HEAD 请求（curl -I 健康检查）"""
+        p = urllib.parse.urlparse(self.path)
+        if p.path == "/":
+            self._head(PAGE.encode("utf-8"), "text/html; charset=utf-8")
+        elif p.path == "/api/groups":
+            self._head(json.dumps(group_items(load_items()), ensure_ascii=False).encode("utf-8"),
+                       "application/json; charset=utf-8")
+        elif p.path in ("/playlist.m3u8", "/subscribe", "/playlist.m3u"):
+            self._head(build_m3u(load_items()).encode("utf-8"),
+                       "application/vnd.apple.mpegurl; charset=utf-8")
+        else:
+            self.send_response(404)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
     def do_GET(self):
         p = urllib.parse.urlparse(self.path)
         if p.path == "/":

@@ -23,6 +23,10 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE)
 import crawl_update as cu
 
+# 确保日志实时输出（systemd 下 stdout 默认块缓冲）
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(line_buffering=True)
+
 PORT = int(os.environ.get("PANEL_PORT", "8788"))
 REFRESH_MINUTES = int(os.environ.get("REFRESH_MINUTES", "30"))
 REFRESH_AGE_SECONDS = int(os.environ.get("REFRESH_AGE_SECONDS", "1800"))

@@ -78,6 +78,7 @@ ExecStart=${PYTHON_BIN} ${APP_DIR}/daemon.py
 Restart=always
 RestartSec=10
 Environment=PANEL_PORT=${PORT}
+Environment=PYTHONUNBUFFERED=1
 Environment=REFRESH_MINUTES=30
 Environment=REFRESH_AGE_SECONDS=1800
 Environment=SCAN_LIMIT=3
