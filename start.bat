@@ -1,3 +1,3 @@
 @echo off
-cd /d "E:\workspace"
+cd /d "%~dp0"
 python start.py

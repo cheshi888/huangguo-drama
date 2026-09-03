@@ -8,15 +8,16 @@
 import sys, json, time, os, re
 from concurrent.futures import ThreadPoolExecutor
 
-sys.path.insert(0, r"E:\workspace")
+BASE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, BASE)
 import huangguo_parser as h
 
 CATS = ["ai-duanju", "ai-manju", "ai-huanlian", "ai-mogai",
         "topics", "ranks/hot", "chigua", "go-home"]
-ID_FILE = r"E:\workspace\all_ids.json"
-PROG_FILE = r"E:\workspace\crawl_progress.json"
-OUT_M3U = r"E:\workspace\all_playlist.m3u8"
-OUT_JSON = r"E:\workspace\all_streams.json"
+ID_FILE = os.path.join(BASE, "all_ids.json")
+PROG_FILE = os.path.join(BASE, "crawl_progress.json")
+OUT_M3U = os.path.join(BASE, "all_playlist.m3u8")
+OUT_JSON = os.path.join(BASE, "all_streams.json")
 
 # 并发线程数（线程池，内存开销小）。可通过环境变量 CRAWL_WORKERS 调整。
 # 网站对并发有惩罚，过高反而触发限流，12 是较稳健的值。

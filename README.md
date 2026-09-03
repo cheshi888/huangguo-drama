@@ -11,7 +11,8 @@
 | `daemon.py` | 常驻守护进程：定时刷新地址 + 自动抓新剧 |
 | `player_server.py` | 本地播放面板（网页） + 订阅服务（m3u8） |
 | `export_m3u.py` | 从爬取结果导出 m3u8 播放列表 |
-| `start.py` / `start.bat` | 一键启动 |
+| `start.py` / `start.bat` | 一键启动（Windows） |
+| `deploy.sh` | Linux VPS 一键部署（systemd 常驻 + 开机自启） |
 
 ## 使用
 
@@ -19,6 +20,29 @@
 start.bat              # 一键启动：后台常驻守护 + 播放面板（http://127.0.0.1:8788/）
 python start.py update # 手动增量更新
 ```
+
+## VPS 部署（Linux）
+
+把整个目录上传到 VPS，然后执行：
+
+```bash
+sudo bash deploy.sh
+```
+
+脚本会自动：检测 Python3 → 生成 systemd 服务 → 开机自启 + 常驻运行。
+
+部署后访问：
+- 播放面板：`http://<VPS公网IP>:8788/`
+- 订阅地址：`http://<VPS公网IP>:8788/playlist.m3u8`
+
+常用命令：
+```bash
+systemctl status huangguo      # 查看状态
+journalctl -u huangguo -f     # 实时日志
+systemctl restart huangguo    # 重启
+```
+
+> 只需 Python3（无需任何第三方库）。如无法访问请放行防火墙端口 8788。
 
 ## 订阅地址
 

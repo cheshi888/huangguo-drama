@@ -13,7 +13,7 @@ import sys
 import time
 import webbrowser
 
-BASE = r"E:\workspace"
+BASE = os.path.dirname(os.path.abspath(__file__))
 PORT = 8788
 
 CREATE_NO_WINDOW = 0x08000000 if os.name == "nt" else 0

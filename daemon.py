@@ -19,10 +19,10 @@ import subprocess
 import sys
 import time
 
-sys.path.insert(0, r"E:\workspace")
+BASE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, BASE)
 import crawl_update as cu
 
-BASE = r"E:\workspace"
 PORT = int(os.environ.get("PANEL_PORT", "8788"))
 REFRESH_MINUTES = int(os.environ.get("REFRESH_MINUTES", "30"))
 REFRESH_AGE_SECONDS = int(os.environ.get("REFRESH_AGE_SECONDS", "1800"))
