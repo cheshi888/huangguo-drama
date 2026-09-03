@@ -3,8 +3,8 @@
 """黄果短剧 - 通用一键启动脚本
 
 用法:
-  python start.py           启动播放面板 + 打开浏览器
-  python start.py update    增量更新（只爬新增，不重复）
+  python start.py           启动常驻守护（播放服务 + 定时刷新 + 自动抓新剧）+ 打开浏览器
+  python start.py update    手动增量更新（只爬新增，不重复）
 """
 import os
 import socket
@@ -24,26 +24,37 @@ def port_in_use(port):
         return s.connect_ex(("127.0.0.1", port)) == 0
 
 
-def start_panel():
+def lan_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
+
+def start_daemon():
     os.chdir(BASE)
-    print("=" * 54)
-    print("  黄果短剧 - 播放面板一键启动")
-    print("=" * 54)
+    print("=" * 56)
+    print("  黄果短剧 - 一键启动（常驻守护）")
+    print("=" * 56)
     if port_in_use(PORT):
-        print("[提示] 播放面板服务已在运行 (端口 %d)" % PORT)
+        print("[提示] 播放/订阅服务已在运行 (端口 %d)" % PORT)
     else:
-        print("[启动] 正在后台启动播放面板服务...")
-        subprocess.Popen([sys.executable, "player_server.py"],
+        print("[启动] 启动常驻守护进程（播放服务 + 定时刷新 + 自动抓新剧）...")
+        subprocess.Popen([sys.executable, "daemon.py"],
                          cwd=BASE, creationflags=CREATE_NO_WINDOW)
-        time.sleep(2)
+        time.sleep(3)
     url = "http://127.0.0.1:%d/" % PORT
     print("[打开] 浏览器 -> %s" % url)
     webbrowser.open(url)
     print()
     print("  播放面板  : %s" % url)
-    print("  订阅地址1 : http://192.168.1.45:%d/playlist.m3u8" % PORT)
-    print("  订阅地址2 : http://192.168.125.5:%d/playlist.m3u8" % PORT)
-    print("  增量更新  : python start.py update")
+    print("  订阅地址  : http://%s:%d/playlist.m3u8" % (lan_ip(), PORT))
+    print("  守护进程  : 后台常驻，定时刷新地址(防过期) + 自动抓新剧")
+    print("  手动更新  : python start.py update")
     print()
 
 
@@ -59,5 +70,5 @@ if __name__ == "__main__":
         run_update()
         input("\n更新完成，按回车键关闭...")
     else:
-        start_panel()
-        input("按回车键退出（服务保持后台运行）...")
+        start_daemon()
+        input("按回车键退出（守护进程保持后台运行）...")

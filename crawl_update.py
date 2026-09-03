@@ -85,6 +85,35 @@ def crawl_one(did, title, items):
     return {"title": title, "eps": len(eps)}
 
 
+def stream_age(stream):
+    """返回 stream 的 auth_key 签发时间距今的秒数；无法解析时返回 None"""
+    m = re.search(r"auth_key=(\d+)-", stream or "")
+    if not m:
+        return None
+    return int(time.time()) - int(m.group(1))
+
+
+def refresh_streams(items, max_age=1800):
+    """重新抓取已超时的剧集播放地址（防签名过期）。max_age：签发超过多少秒才刷新"""
+    ok = err = skip = 0
+    for it in items:
+        if not it.get("url"):
+            continue
+        age = stream_age(it.get("stream"))
+        if age is not None and age < max_age:
+            skip += 1
+            continue
+        try:
+            it["stream"] = h.get_stream(it["url"], it["ep"])
+            it.pop("error", None)
+            ok += 1
+        except Exception as ex:
+            it["error"] = str(ex)
+            err += 1
+        time.sleep(0.12)
+    return ok, err, skip
+
+
 def main():
     print("扫描全站分类页，收集当前剧集…")
     current, order = collect_all_ids()

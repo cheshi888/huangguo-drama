@@ -147,14 +147,10 @@ kw.addEventListener('input',()=>{
 </html>'''
 
 
-def build_m3u(items, host=""):
+def build_m3u(items):
     lines = ["#EXTM3U"]
-    host = host or ("127.0.0.1:%d" % PORT)
     for it in items:
-        if it.get("url"):
-            lines.append('#EXTINF:-1 group-title="黄果短剧",%s 第%s集' % (it.get("title", ""), it.get("ep", "")))
-            lines.append("http://%s/play?id=%s&ep=%s" % (host, it.get("id"), it.get("ep")))
-        elif "stream" in it:
+        if "stream" in it:
             lines.append('#EXTINF:-1 group-title="黄果短剧",%s 第%s集' % (it.get("title", ""), it.get("ep", "")))
             lines.append(it["stream"])
     return "\n".join(lines) + "\n"
@@ -210,8 +206,7 @@ class App(BaseHTTPRequestHandler):
             except Exception as ex:
                 self._send(500, "resolve failed: %s" % ex, "text/plain; charset=utf-8")
         elif p.path in ("/playlist.m3u8", "/subscribe", "/playlist.m3u"):
-            host = self.headers.get("Host") or ""
-            self._send(200, build_m3u(load_items(), host),
+            self._send(200, build_m3u(load_items()),
                        "application/vnd.apple.mpegurl; charset=utf-8")
         else:
             self._send(404, "not found", "text/plain; charset=utf-8")
